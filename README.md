@@ -17,7 +17,7 @@ Clone/download the repository
 Copy the pipeline_salmonquant.py and pipeline_salmonquant folder to your cgat/cgat-flow/CGATPipelines/
 
 ## Configuration
-The pipeline requires a configured :file: ###`pipeline.yml` file.
+The pipeline requires a configured :file: ### `pipeline.yml` file.
 
 Make a directory with your project name, for Salmon quantification
 Configure the pipeline with ###`cgatflow salmonquant config`
