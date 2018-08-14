@@ -1,0 +1,118 @@
+
+# genome ID
+genome: hg38_noalt
+
+# directory where exported data is located
+exportdir: export
+
+# location of indexed genome 
+genome_dir: /shared/sudlab1/General/mirror/genomes/index
+
+# scratchdir for data not to be backed up
+scratchdir: /tmp
+
+# a version string
+version: ''
+
+# directory for publishing results on the web
+web_dir: ../web
+
+# provide a reference geneset (suffix= ".gtf.gz")
+# geneset=refcoding.gtf.gz
+# geneset should be located in working directory
+geneset: agg-agg-agg.gtf.gz
+
+#######################################################
+database:
+    url: sqlite:////shared/sudlab1/General/projects/UTRONs/bladder_ctrl_utrons/csvdb
+
+    ################################################################
+    ## Location of annotation database
+    ################################################################
+annotations:
+    database: /shared/sudlab1/General/annotations/hg38_noalt_ensembl85/csvdb
+
+    # directory with annotation information
+    dir: /shared/sudlab1/General/annotations/hg38_noalt_ensembl85
+
+
+    ################################################################
+    ## merge options
+    ################################################################
+    #[merge]
+    # input pattern
+    # For example, if your files are called:
+    #    CLLP80-S1-1-L001.fastq.1.gz
+    #    CLLP80-S1-1-L001.fastq.2.gz
+    #    CLLP80-S1-1-L002.fastq.1.gz
+    #    CLLP80-S1-1-L002.fastq.2.gz
+    # and you want to create the following files:
+    #    CLLP80-S1-1.quant
+    #
+    # choose the following input and output patterns:
+    #
+    # pattern_input=(.*)-(S\d)-(\d)-(L\d+)
+    # pattern_output=\1-\2-\3
+    # Note that the .quant etc will be added by the pipeline. The
+    # pattern must not include this.
+    #pattern_input=(\S+)-(\S+)-(\S+)
+    #pattern_output=\1-\2-\3
+
+
+    ################################################################
+    ## program options
+    ################################################################
+    #
+    # salmon options
+    #
+    ################################################################
+salmon:
+
+    # see `salmon quant --help` for explanation of library types
+    # ISF == fr-secondstrand in tophat
+    libtype: A
+
+    # String providing additional options to append to the salmon quant
+    # command
+    # optional arguments include:
+    # --extraSensitive
+    # may use --gcBias, but be aware this will double the run time and 
+    # requires a lot of memory, which will in turn prolong the waiting
+    # time for having our tasks run through the cluster
+    # using --gcBias when running hundreds of samples is not ideal
+    options: --writeUnmappedNames
+
+    # kmer size for salmon library
+    kmer: 31
+
+    # number of bootstrap samples
+    # Note: you need to bootstrap for differential expression with sleuth
+    # if there are no technical replicates
+    bootstrap: 100
+
+    # string to append to the salmon index command to provide specific
+    # options
+    # from salmon >= v0.5.0, an index type is required
+    # specify one of --type=fmd or --type=quasi
+    index_options: --type=quasi
+
+    threads: 4
+
+    memory: 16G
+
+    #####################################################
+report:
+    # number of threads to use to build the documentation
+    threads: 1
+
+    # directory for html documentation
+    html: report/html
+
+    # directory for doctrees
+    doctrees: report/doctrees
+
+    # prefix for publishing
+    prefix: default
+
+    # report engine to use
+    engine: cgatreport
