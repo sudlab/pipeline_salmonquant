@@ -17,15 +17,15 @@ Clone/download the repository
 Copy the pipeline_salmonquant.py and pipeline_salmonquant folder to your cgat/cgat-flow/CGATPipelines/
 
 ## Configuration
-The pipeline requires a configured :file:`pipeline.yml` file.
+The pipeline requires a configured :file:`###pipeline.yml` file.
 
 Make a directory with your project name, for Salmon quantification
-Configure the pipeline with `cgatflow salmonquant config`
+Configure the pipeline with `###cgatflow salmonquant config`
 A pipeline.log and pipeline.yml file(s) will be added to your new directory
 Modify the pipeline.yml according to your project (specify genome, genome directory, annotation database and directory, database for uploading the outputs; specify options for Salmon quantification)
 
 ## Pipeline use
-Run the pipeline with `cgatflow salmonquant make full`
+Run the pipeline with `###cgatflow salmonquant make full`
 
 For running the pipeline on a large set of samples, submit the pipeline onto the cluster (sharc), using a submit_pipeline_cgtaflow custom script.
 
