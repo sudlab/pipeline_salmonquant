@@ -426,7 +426,7 @@ def quantifyWithSalmon(infiles, outfile):
         fastq_inputs = ''' -1 %(fastq1)s
                            -2 %(fastq2)s ''' % locals( )
     else:
-        fastq_inputs = "-1 %(infile)s" % locals()
+        fastq_inputs = "-r %(infile)s" % locals()
 
     statement = '''
     salmon quant -i %(salmonIndex)s
