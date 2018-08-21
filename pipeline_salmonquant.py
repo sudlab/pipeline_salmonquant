@@ -452,9 +452,9 @@ def mergeAllQuants(infiles, outfile):
     P.concatenate_and_load(infiles, outfile,
                            regex_filename="quantification.dir/(.+).sf",
                            options = "-i transcript_id"
-                           "-i Name -i Length -i EffectiveLength"
-                           "-i TPM -i NumReads -i track"
-                           "-i source")
+                           " -i Name -i Length -i EffectiveLength"
+                           " -i TPM -i NumReads -i track"
+                           " -i source")
 
 ###################################################
 # Generic pipeline tasks
