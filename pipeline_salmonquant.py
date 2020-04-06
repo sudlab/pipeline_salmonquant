@@ -168,7 +168,7 @@ Code
 # load modules
 from ruffus import *
 from ruffus.combinatorics import *
-import CGATCore.Experiment as E
+import cgatcore.experiment as E
 
 import sys
 import os
@@ -176,16 +176,17 @@ import re
 import glob
 import pandas as pd
 import sqlite3
-import CGAT.Sra as Sra
+import cgat.Sra as Sra
 
-from CGATCore import Pipeline as P
-import CGAT.GTF as GTF
-import CGATCore.IOTools as IOTools
+from cgatcore import pipeline as P
+import cgat.GTF as GTF
+import cgatcore.iotools as IOTools
 
-import CGATPipelines.PipelineGeneset as PipelineGeneset
-import CGATPipelines.PipelineRnaseq as PipelineRnaseq
-import CGATPipelines.PipelineTracks as PipelineTracks
-from CGATPipelines.Report import run_report
+import cgatpipelines.tasks.geneset as PipelineGeneset
+import cgatpipelines.tasks.rnaseq as PipelineRnaseq
+import cgatpipelines.tasks.tracks as PipelineTracks
+from cgatpipelines.report import run_report
+import cgatpipelines.tasks.expression as Expression
 import CGAT.Expression as Expression
 
 ###################################################
