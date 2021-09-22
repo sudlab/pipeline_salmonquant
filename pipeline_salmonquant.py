@@ -89,7 +89,7 @@ Usage
 =====
 
 See :ref:`PipelineSettingUp` and :ref:`PipelineRunning` on general
-information how to use CGAT pipelines.
+information how to use cgat pipelines.
 
 Configuration
 -------------
@@ -117,7 +117,7 @@ The pipeline requires the results from
 :doc:`pipeline_annotations`. Set the configuration variable
 :py:data:`annotations_database` and :py:data:`annotations_dir`.
 
-On top of the default CGAT setup, the pipeline requires the following
+On top of the default cgat setup, the pipeline requires the following
 software to be in the path:
 
 +--------------+----------+------------------------------------+
@@ -167,26 +167,14 @@ Code
 """
 # load modules
 from ruffus import *
-from ruffus.combinatorics import *
-import CGATCore.Experiment as E
 
 import sys
 import os
-import re
-import glob
-import pandas as pd
 import sqlite3
-import CGAT.Sra as Sra
 
-from CGATCore import Pipeline as P
-import CGAT.GTF as GTF
-import CGATCore.IOTools as IOTools
-
-import CGATPipelines.PipelineGeneset as PipelineGeneset
-import CGATPipelines.PipelineRnaseq as PipelineRnaseq
-import CGATPipelines.PipelineTracks as PipelineTracks
-from CGATPipelines.Report import run_report
-import CGAT.Expression as Expression
+from cgatcore import pipeline as P
+import cgat.GTF as GTF
+import cgatcore.iotools as IOTools
 
 ###################################################
 ###################################################
@@ -208,23 +196,22 @@ P.get_parameters(
 #    "annotations_dir" to point to the absolute path names.
 
 PARAMS = P.PARAMS
-PARAMS.update(P.peek_parameters(
-    PARAMS["annotations_dir"],
-    'genesets',
-    prefix="annotations_",
-    update_interface=True,
-    restrict_interface=True))
+if os.path.exists(PARAMS["annotations_dir"]):
+    PARAMS.update(P.peek_parameters(
+        PARAMS["annotations_dir"],
+        'genesets',
+        prefix="annotations_",
+        update_interface=True,
+        restrict_interface=True))
 
 # if necessary, update the PARAMS dictionary in any modules file.
 # e.g.:
 #
-# import CGATPipelines.PipelineGeneset as PipelineGeneset
+# import cgatpipelines.PipelineGeneset as PipelineGeneset
 # PipelineGeneset.PARAMS = PARAMS
 #
 # Note that this is a hack and deprecated, better pass all
 # parameters that are needed by a function explicitely.
-
-PipelineGeneset.PARAMS = PARAMS
 
 # Helper functions mapping tracks to conditions, etc
 # determine the location of the input files (reads).
@@ -239,8 +226,6 @@ else:
         DATADIR = "data.dir"
     else:
         DATADIR = PARAMS["input"]  # not recommended practise.
-
-Sample = PipelineTracks.AutoSample
 
 ###############################################################################
 # Utility function
@@ -306,10 +291,55 @@ def buildReferenceTranscriptome(infile, outfile):
 
     P.run(statement)
 
+    
+@active_if(PARAMS["salmon_use_genome_decoy"])
 @transform(buildReferenceTranscriptome,
            suffix(".fa"),
+           add_inputs(
+               os.path.join(PARAMS["genome_dir"], PARAMS["genome"] + ".fa")),
+           r"_with_decoy.fa")
+def add_decoy_to_transcriptome(infiles, outfile):
+    '''Modern versions of salmon allow the addition of decay sequences to
+    the index.  most comprehensive option is to add the whole genome
+    as a decoy (after the transcriptome). This function does this if
+    the :PARAM:use_genome_decoy is True
+
+    '''
+
+    transcriptome, decoy_sequence = infiles
+
+    statement = ''' cat %(transcriptome)s %(decoy_sequence)s > %(outfile)s'''
+    P.run(statement)
+
+
+@active_if(PARAMS["salmon_use_genome_decoy"])
+@transform(os.path.join(PARAMS["genome_dir"], PARAMS["genome"] + ".fa"),
+           formatter(),
+           "decoys.txt")
+def build_decoy_list(infile, outfile):
+    '''The salmon indexer also requres a list of the transcripts to use as a
+    decoy. This can be parsed from the fasta'''
+
+    statement = '''grep "^>" %(infile)s 
+                     | cut -d " " -f 1 
+                     | sed 's/>//g' > %(outfile)s '''
+
+    P.run(statement)
+
+
+if PARAMS["salmon_use_genome_decoy"]:
+    transcriptome = add_decoy_to_transcriptome
+else:
+    transcriptome = buildReferenceTranscriptome
+
+
+@transform(transcriptome,
+           suffix(".fa"),
+           add_inputs(build_decoy_list
+                      if PARAMS["salmon_use_genome_decoy"]
+                      else None),
            ".salmon.index")
-def buildSalmonIndex(infile, outfile):
+def buildSalmonIndex(infiles, outfile):
     '''
     Builds a salmon index for the reference transriptome
     Parameters
@@ -327,18 +357,34 @@ def buildSalmonIndex(infile, outfile):
        path to output file
     '''
 
-    job_memory = "64G"
+    job_memory = PARAMS["salmon_index_memory"]
+    job_threads = PARAMS["salmon_index_threads"]
+    
+    transcriptome, decoys = infiles
+
+    salmon_index_options = ""
+    
+    if PARAMS["salmon_index_options"] is not None:
+        salmon_index_options += " " + PARAMS["salmon_index_options"]
+    assert len(salmon_index_options) > 0
+    if decoys is not None:
+        salmon_index_options += " -d " + decoys
+        
     # need to remove the index directory (if it exists) as ruffus uses
     # the directory timestamp which wont change even when re-creating
     # the index files
     statement = '''
-    rm -rf %(outfile)s;
-    salmon index %(salmon_index_options)s -t %(infile)s -i %(outfile)s
-    -k %(salmon_kmer)s
+    rm -rf %(outfile)s &&
+    salmon index %(salmon_index_options)s 
+                 -t %(transcriptome)s 
+                 -i %(outfile)s
+                 -k %(salmon_kmer)s
+                 -p %(salmon_index_threads)s
     '''
 
     P.run(statement)
 
+    
 @originate("transcript2geneMap.tsv")
 def getTranscript2GeneMap(outfile):
     ''' Extract a 1:1 map of transcript_id to gene_id from the geneset '''
@@ -348,15 +394,25 @@ def getTranscript2GeneMap(outfile):
 
     for entry in iterator:
 
+        try:
+            gene_id = entry[PARAMS["gene_id_field"]]
+        except KeyError:
+            gene_id = entry.gene_id
+
+        try:
+            transcript_id = entry[PARAMS["transcript_id_field"]]
+        except KeyError:
+            transcript_id = entry.transcript_id
+            
         # Check the same transcript_id is not mapped to multiple gene_ids!
-        if entry.transcript_id in transcript2gene_dict:
-            if not entry.gene_id == transcript2gene_dict[entry.transcript_id]:
+        if transcript_id in transcript2gene_dict:
+            if not gene_id == transcript2gene_dict[transcript_id]:
                 raise ValueError('''multipe gene_ids associated with
                 the same transcript_id %s %s''' % (
-                    entry.gene_id,
-                    transcript2gene_dict[entry.transcript_id]))
+                    gene_id,
+                    transcript2gene_dict[transcript_id]))
         else:
-            transcript2gene_dict[entry.transcript_id] = entry.gene_id
+            transcript2gene_dict[transcript_id] = gene_id
 
     with IOTools.open_file(outfile, "w") as outf:
         outf.write("transcript_id\tgene_id\n")
@@ -370,10 +426,10 @@ def getTranscript2GeneMap(outfile):
 
 @follows(mkdir("quantification.dir"), buildSalmonIndex)
 @transform(["*.fastq.gz",
-	   "*.fastq.1.gz"],
-         formatter(".+/(?P<TRACK>.+).fastq.+"),
-         add_inputs(buildSalmonIndex),
-         r"quantification.dir/{TRACK[0]}")
+            "*.fastq.1.gz"],
+           formatter(".+/(?P<TRACK>.+).fastq.+"),
+           add_inputs(buildSalmonIndex),
+           r"quantification.dir/{TRACK[0]}/quant.sf")
 def quantifyWithSalmon(infiles, outfile):
     '''Quantify existing samples against genesets
 
@@ -414,9 +470,9 @@ def quantifyWithSalmon(infiles, outfile):
 
     '''
 
-    job_threads=2
-    job_memory="16G"
-	
+    job_threads = PARAMS["salmon_threads"]
+    job_memory = PARAMS["salmon_memory"]
+
     infile, salmonIndex = infiles
     basefile = os.path.basename(infile)
     
@@ -424,9 +480,22 @@ def quantifyWithSalmon(infiles, outfile):
         fastq1 = infile
         fastq2 = P.snip(infile, ".1.gz")+".2.gz"
         fastq_inputs = ''' -1 %(fastq1)s
-                           -2 %(fastq2)s ''' % locals( )
+                           -2 %(fastq2)s ''' % locals()
     else:
         fastq_inputs = "-r %(infile)s" % locals()
+
+    salmon_options = ""
+    
+    if PARAMS["salmon_options"] is not None:
+        salmon_options += " " + PARAMS["salmon_options"]
+        
+    if PARAMS["salmon_bootstraps"] > 0:
+        if PARAMS["salmon_bootstrap_type"] in ("gibbs", "Gibbs"):
+            salmon_options += " --numGibbsSamples " + \
+                                        str(PARAMS["salmon_bootstraps"])
+        elif PARAMS["salmon_bootstrap_type"] in ("bootstrap", "Bootstrap"):
+            salmon_options += " --numBootstraps " + \
+                                        str(PARAMS["salmon_bootstraps"])
 
     statement = '''
     salmon quant -i %(salmonIndex)s
@@ -434,13 +503,31 @@ def quantifyWithSalmon(infiles, outfile):
         %(fastq_inputs)s
         -o %(outfile)s
         --threads %(job_threads)s
-        %(salmon_options)s;
-    mv %(outfile)s/quant.sf %(outfile)s.sf;
+        %(salmon_options)s &&
+
+    cp %(outfile)s/quant.sf %(outfile)s.sf;
     '''
         
     P.run(statement)
 
+@collate(quantifyWithSalmon,
+         formatter(),
+         add_inputs(getTranscript2GeneMap),
+         ["transcripts_tximport.RData",
+          "genes_tximport.RData"])
+def summarize_with_tximport(infiles, outfiles):
+    '''Use tximport to build R objects containing the summarized
+    results of the salmon quantification. Should probably recreate
+    with tximeta'''
 
+    pipeline_dir = os.path.dirname(__file__)
+
+    job_memory="16G"
+    statement = '''Rscript %(pipeline_dir)s/tximport.R
+                   > tximport.log'''
+
+    P.run(statement)
+    
 ###################################################
 # Loading into database
 ###################################################
@@ -448,10 +535,10 @@ def quantifyWithSalmon(infiles, outfile):
 @follows(quantifyWithSalmon)
 @merge("quantification.dir/*.sf", "salmon_quant.load")
 def mergeAllQuants(infiles, outfile):
-    job_memory="6G"
+    job_memory = "6G"
     P.concatenate_and_load(infiles, outfile,
                            regex_filename="quantification.dir/(.+).sf",
-                           options = "-i transcript_id"
+                           options="-i transcript_id"
                            " -i Name -i Length -i EffectiveLength"
                            " -i TPM -i NumReads -i track"
                            " -i source")
@@ -459,7 +546,9 @@ def mergeAllQuants(infiles, outfile):
 ###################################################
 # Generic pipeline tasks
 
-@follows(mergeAllQuants)
+@follows(mergeAllQuants,
+         getTranscript2GeneMap,
+         summarize_with_tximport)
 def full():
     ''' Builds transcriptome and index, then quantifies'''
 

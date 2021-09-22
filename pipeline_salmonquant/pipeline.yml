@@ -19,12 +19,20 @@ web_dir: ../web
 
 # provide a reference geneset (suffix= ".gtf.gz")
 # geneset=refcoding.gtf.gz
-# geneset should be located in working directory
+# geneset should be in the current directory or a full path provided
 geneset: agg-agg-agg.gtf.gz
 
+# THe following fields allow fields other than gene_id and transcript
+# id to be used for building the transcript2geneMap. This can be useful
+# if you've assembled a gene set and the gene_ids are in something like
+# ref_gene_id. If a particular field is not present, the code will
+# fall back to gene_id/transcript_id. This is useful for novel genes.
+
+transcript_id_field: transcript_id
+gene_id_field: gene_id
 #######################################################
 database:
-    url: sqlite:////shared/sudlab1/General/projects/UTRONs/bladder_ctrl_utrons/csvdb
+    url: sqlite:///./csvdb
 
     ################################################################
     ## Location of annotation database
@@ -35,30 +43,6 @@ annotations:
     # directory with annotation information
     dir: /shared/sudlab1/General/annotations/hg38_noalt_ensembl85
 
-
-    ################################################################
-    ## merge options
-    ################################################################
-    #[merge]
-    # input pattern
-    # For example, if your files are called:
-    #    CLLP80-S1-1-L001.fastq.1.gz
-    #    CLLP80-S1-1-L001.fastq.2.gz
-    #    CLLP80-S1-1-L002.fastq.1.gz
-    #    CLLP80-S1-1-L002.fastq.2.gz
-    # and you want to create the following files:
-    #    CLLP80-S1-1.quant
-    #
-    # choose the following input and output patterns:
-    #
-    # pattern_input=(.*)-(S\d)-(\d)-(L\d+)
-    # pattern_output=\1-\2-\3
-    # Note that the .quant etc will be added by the pipeline. The
-    # pattern must not include this.
-    #pattern_input=(\S+)-(\S+)-(\S+)
-    #pattern_output=\1-\2-\3
-
-
     ################################################################
     ## program options
     ################################################################
@@ -68,6 +52,8 @@ annotations:
     ################################################################
 salmon:
 
+    use_genome_decoy: True
+    
     # see `salmon quant --help` for explanation of library types
     # ISF == fr-secondstrand in tophat
     libtype: A
@@ -80,7 +66,7 @@ salmon:
     # requires a lot of memory, which will in turn prolong the waiting
     # time for having our tasks run through the cluster
     # using --gcBias when running hundreds of samples is not ideal
-    options: --writeUnmappedNames
+    options: --writeUnmappedNames --validateMappings --gcBias
 
     # kmer size for salmon library
     kmer: 31
@@ -88,17 +74,21 @@ salmon:
     # number of bootstrap samples
     # Note: you need to bootstrap for differential expression with sleuth
     # if there are no technical replicates
-    bootstrap: 100
+    bootstraps: 100
+    # bootstrap or Gibbs
+    bootstrap_type: bootstrap
 
     # string to append to the salmon index command to provide specific
     # options
     # from salmon >= v0.5.0, an index type is required
     # specify one of --type=fmd or --type=quasi
-    index_options: --type=quasi
-
+    index_options:
+    index_threads: 4
+    index_memory: 8G
+    
     threads: 4
 
-    memory: 16G
+    memory: 4G
 
     #####################################################
 report:
