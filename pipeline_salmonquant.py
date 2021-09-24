@@ -366,7 +366,7 @@ def buildSalmonIndex(infiles, outfile):
     
     if PARAMS["salmon_index_options"] is not None:
         salmon_index_options += " " + PARAMS["salmon_index_options"]
-    assert len(salmon_index_options) > 0
+
     if decoys is not None:
         salmon_index_options += " -d " + decoys
         
