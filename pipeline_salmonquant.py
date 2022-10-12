@@ -3,7 +3,7 @@ RNA-Seq Differential expression pipeline
 ========================================
 
 
-The Salmon Quantification pipeline is a tool for quantifying 
+The Salmon Quantification pipeline is a tool for quantifying
 the expression of transcripts using RNA-seq data.
 
 It requires three inputs:
@@ -291,7 +291,7 @@ def buildReferenceTranscriptome(infile, outfile):
 
     P.run(statement)
 
-    
+
 @active_if(PARAMS["salmon_use_genome_decoy"])
 @transform(buildReferenceTranscriptome,
            suffix(".fa"),
@@ -320,8 +320,8 @@ def build_decoy_list(infile, outfile):
     '''The salmon indexer also requres a list of the transcripts to use as a
     decoy. This can be parsed from the fasta'''
 
-    statement = '''grep "^>" %(infile)s 
-                     | cut -d " " -f 1 
+    statement = '''grep "^>" %(infile)s
+                     | cut -d " " -f 1
                      | sed 's/>//g' > %(outfile)s '''
 
     P.run(statement)
@@ -359,24 +359,24 @@ def buildSalmonIndex(infiles, outfile):
 
     job_memory = PARAMS["salmon_index_memory"]
     job_threads = PARAMS["salmon_index_threads"]
-    
+
     transcriptome, decoys = infiles
 
     salmon_index_options = ""
-    
+
     if PARAMS["salmon_index_options"] is not None:
         salmon_index_options += " " + PARAMS["salmon_index_options"]
 
     if decoys is not None:
         salmon_index_options += " -d " + decoys
-        
+
     # need to remove the index directory (if it exists) as ruffus uses
     # the directory timestamp which wont change even when re-creating
     # the index files
     statement = '''
     rm -rf %(outfile)s &&
-    salmon index %(salmon_index_options)s 
-                 -t %(transcriptome)s 
+    salmon index %(salmon_index_options)s
+                 -t %(transcriptome)s
                  -i %(outfile)s
                  -k %(salmon_kmer)s
                  -p %(salmon_index_threads)s
@@ -384,7 +384,7 @@ def buildSalmonIndex(infiles, outfile):
 
     P.run(statement)
 
-    
+
 @originate("transcript2geneMap.tsv")
 def getTranscript2GeneMap(outfile):
     ''' Extract a 1:1 map of transcript_id to gene_id from the geneset '''
@@ -403,7 +403,7 @@ def getTranscript2GeneMap(outfile):
             transcript_id = entry[PARAMS["transcript_id_field"]]
         except KeyError:
             transcript_id = entry.transcript_id
-            
+
         # Check the same transcript_id is not mapped to multiple gene_ids!
         if transcript_id in transcript2gene_dict:
             if not gene_id == transcript2gene_dict[transcript_id]:
@@ -475,7 +475,8 @@ def quantifyWithSalmon(infiles, outfile):
 
     infile, salmonIndex = infiles
     basefile = os.path.basename(infile)
-    
+    outfile = os.path.dirname(outfile)
+
     if infile.endswith(".fastq.1.gz"):
         fastq1 = infile
         fastq2 = P.snip(infile, ".1.gz")+".2.gz"
@@ -485,10 +486,10 @@ def quantifyWithSalmon(infiles, outfile):
         fastq_inputs = "-r %(infile)s" % locals()
 
     salmon_options = ""
-    
+
     if PARAMS["salmon_options"] is not None:
         salmon_options += " " + PARAMS["salmon_options"]
-        
+
     if PARAMS["salmon_bootstraps"] > 0:
         if PARAMS["salmon_bootstrap_type"] in ("gibbs", "Gibbs"):
             salmon_options += " --numGibbsSamples " + \
@@ -507,7 +508,7 @@ def quantifyWithSalmon(infiles, outfile):
 
     cp %(outfile)s/quant.sf %(outfile)s.sf;
     '''
-        
+
     P.run(statement)
 
 @collate(quantifyWithSalmon,
@@ -527,7 +528,7 @@ def summarize_with_tximport(infiles, outfiles):
                    > tximport.log'''
 
     P.run(statement)
-    
+
 ###################################################
 # Loading into database
 ###################################################
@@ -572,4 +573,3 @@ if __name__ == "__main__":
 #                       'quantifyWithSalmon': (quantifyWithSalmon,),
 #		       'full': (full,)
 #                       }
-
