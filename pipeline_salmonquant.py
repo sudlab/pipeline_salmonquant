@@ -515,7 +515,7 @@ def quantifyWithSalmon(infiles, outfile):
          formatter(),
          add_inputs(getTranscript2GeneMap),
          ["transcripts_tximport.RData",
-          "genes_tximport.RData"])
+          "gene_tximport.RData"])
 def summarize_with_tximport(infiles, outfiles):
     '''Use tximport to build R objects containing the summarized
     results of the salmon quantification. Should probably recreate
@@ -580,7 +580,7 @@ def get_bigwigs(infiles, outfile):
         
         rm -f %(tmpfile)s
         '''
-    P.run(statment)
+    P.run(statement, job_memory=PARAMS["bigwig_memory"])
     
 ###################################################
 # Loading into database
