@@ -576,7 +576,7 @@ def get_bigwigs(infiles, outfile):
         -scale %(scale)f
         > %(tmpfile)s &&
         
-        bedGraphToBigWig %(tmpfile)s %(infile)s.contig %(outfile)s &&
+        bedGraphToBigWig %(tmpfile)s %(infile)s.contigs %(outfile)s &&
         
         rm -f %(tmpfile)s
         '''
