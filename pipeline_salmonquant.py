@@ -550,7 +550,7 @@ def get_bigwigs(infiles, outfile):
     body counts. Requires BAM files that match the fastq files to be present'''
     
     infile, _ = infiles
-    tmpfile = P.get_temp_file()
+    tmpfile = P.get_temp_filename()
     sample = P.snip(infile, ".bam")
     
     size_factors = {line.split()[0]: line.split()[1] for line in open("size_factors.tsv")}
