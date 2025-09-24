@@ -553,10 +553,10 @@ def get_bigwigs(infiles, outfile):
     tmpfile = P.get_temp_file()
     sample = P.snip(infile, ".bam")
     
-    size_factors = {line.split[0]: float(line.split[1]) for line in open("size_factors.tsv")}
+    size_factors = {line.split()[0]: line.split()[1] for line in open("size_factors.tsv")}
     
     try:
-        scale = size_factors[sample]
+        scale = float(size_factors[sample])
     except KeyError:
         E.error(f"Sample {sample} is not in the size_factors.tsv file. Check Fastqs and BAMs are named identically")
         raise
