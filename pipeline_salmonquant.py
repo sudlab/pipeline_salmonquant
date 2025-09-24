@@ -529,6 +529,59 @@ def summarize_with_tximport(infiles, outfiles):
 
     P.run(statement)
 
+@transform(summarize_with_tximport,
+           regex(".+"),
+           "size_factors.tsv")
+def get_size_factors(infiles, outfile):
+    '''Use DEseq to generate size factors from read counts in
+    gene bodies.'''
+    
+    pipeline_dir = os.path.dirname(__file__)    
+    statement = "Rscript %(pipeline_dir)s/calcNormFactors.R > calcNormFactors.log"
+    P.run(statement)
+    
+@follows(mkdir("bigwigs.dir"))
+@transform("*.bam", 
+           suffix(".bam"),
+           add_inputs(get_size_factors),
+           r"bigwigs.dir/\1.bw")
+def get_bigwigs(infiles, outfile):
+    '''Calculate normalised bigwigs based on DESeq normalisation of the gene
+    body counts. Requires BAM files that match the fastq files to be present'''
+    
+    infile, _ = infiles
+    tmpfile = P.get_temp_file()
+    sample = P.snip(infile, ".bam")
+    
+    size_factors = {line.split[0]: float(line.split[1]) for line in open("size_factors.tsv")}
+    
+    try:
+        scale = size_factors[sample]
+    except KeyError:
+        E.error(f"Sample {sample} is not in the size_factors.tsv file. Check Fastqs and BAMs are named identically")
+        raise
+    
+    statement = '''
+      samtools view -H %(infile)s 
+         | grep SN
+         | cut -f2,3
+         | sed 's/SN://; s/LN://'
+         > %(infile)s.contigs &&
+         
+      bedtools genomecov
+        -ibam %(infile)s
+        -g %(infile)s.contigs
+        -bg
+        -split
+        -scale %(scale)f
+        > %(tmpfile)s &&
+        
+        bedGraphToBigWig %(tmpfile2)s %(infile)s.contig %(outfile)s &&
+        
+        rm -f %(tmpfile)s
+        '''
+    P.run(statment)
+    
 ###################################################
 # Loading into database
 ###################################################
