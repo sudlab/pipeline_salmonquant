@@ -91,6 +91,10 @@ salmon:
     memory: 4G
 
     #####################################################
+
+bigwig:
+    memory: 4G
+    
 report:
     # number of threads to use to build the documentation
     threads: 1
