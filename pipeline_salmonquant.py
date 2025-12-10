@@ -296,7 +296,8 @@ def buildReferenceTranscriptome(infile, outfile):
 @transform(buildReferenceTranscriptome,
            suffix(".fa"),
            add_inputs(
-               os.path.join(PARAMS["genome_dir"], PARAMS["genome"] + ".fa")),
+               os.path.join(PARAMS["genome_dir"], PARAMS["genome"] + ".fa"),
+               PARAMS.get("addition_transcripts", "")),
            r"_with_decoy.fa")
 def add_decoy_to_transcriptome(infiles, outfile):
     '''Modern versions of salmon allow the addition of decay sequences to
@@ -306,9 +307,11 @@ def add_decoy_to_transcriptome(infiles, outfile):
 
     '''
 
-    transcriptome, decoy_sequence = infiles
+    transcriptome, decoy_sequence, additional_transcripts = infiles
 
-    statement = ''' cat %(transcriptome)s %(decoy_sequence)s > %(outfile)s'''
+    statement = ''' cat %(transcriptome)s 
+                        %(decoy_sequence)s 
+                        %(additional_transcripts)s > %(outfile)s'''
     P.run(statement)
 
 
