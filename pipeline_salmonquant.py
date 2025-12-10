@@ -189,20 +189,7 @@ P.get_parameters(
      "../pipeline.yml",
      "pipeline.yml"])
 
-# add configuration values from associated pipelines
-#
-# 1. pipeline_annotations: any parameters will be added with the
-#    prefix "annotations_". The interface will be updated with
-#    "annotations_dir" to point to the absolute path names.
-
 PARAMS = P.PARAMS
-if os.path.exists(PARAMS["annotations_dir"]):
-    PARAMS.update(P.peek_parameters(
-        PARAMS["annotations_dir"],
-        'genesets',
-        prefix="annotations_",
-        update_interface=True,
-        restrict_interface=True))
 
 # if necessary, update the PARAMS dictionary in any modules file.
 # e.g.:
@@ -226,29 +213,6 @@ else:
         DATADIR = "data.dir"
     else:
         DATADIR = PARAMS["input"]  # not recommended practise.
-
-###############################################################################
-# Utility function
-###############################################################################
-
-def connect():
-    '''utility function to connect to database.
-
-    Use this method to connect to the pipeline database.
-    Additional databases can be attached here as well.
-    This method also attaches to helper databases.
-
-    Returns an sqlite3 database handle.
-    '''
-
-    dbh = sqlite3.connect(PARAMS["database_name"])
-    statement = '''ATTACH DATABASE '%s' as annotations''' % (
-        PARAMS["annotations_database"])
-    cc = dbh.cursor()
-    cc.execute(statement)
-    cc.close()
-
-    return dbh
 
 ###############################################################################
 # build indexes
