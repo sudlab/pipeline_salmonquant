@@ -20,7 +20,7 @@ web_dir: ../web
 # provide a reference geneset (suffix= ".gtf.gz")
 # geneset=refcoding.gtf.gz
 # geneset should be in the current directory or a full path provided
-geneset: agg-agg-agg.gtf.gz
+geneset: geneset_all.gtf.gz
 
 # THe following fields allow fields other than gene_id and transcript
 # id to be used for building the transcript2geneMap. This can be useful
@@ -30,6 +30,11 @@ geneset: agg-agg-agg.gtf.gz
 
 transcript_id_field: transcript_id
 gene_id_field: gene_id
+
+# With the following there is the ability to add additional transcripts
+# to the index. This allows for the quantification of things like transgenes
+additional_transcripts:
+
 #######################################################
 database:
     url: sqlite:///./csvdb
