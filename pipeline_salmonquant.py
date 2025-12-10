@@ -175,6 +175,7 @@ import sqlite3
 from cgatcore import pipeline as P
 import cgat.GTF as GTF
 import cgatcore.iotools as IOTools
+import cgat.FastaIterator as Fasta
 
 ###################################################
 ###################################################
@@ -380,6 +381,10 @@ def getTranscript2GeneMap(outfile):
                     transcript2gene_dict[transcript_id]))
         else:
             transcript2gene_dict[transcript_id] = gene_id
+    if PARAMS["additional_transcripts"]:
+        for record in Fasta.iterate(
+            IOTools.open_file(PARAMS["additional_transcripts"])):
+            transcript2gene_dict[record.title] = record.title
 
     with IOTools.open_file(outfile, "w") as outf:
         outf.write("transcript_id\tgene_id\n")
