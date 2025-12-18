@@ -271,7 +271,7 @@ def add_decoy_to_transcriptome(infiles, outfile):
 
     '''
 
-    transcriptome, decoy_sequence,
+    transcriptome, decoy_sequence = infiles
 
     if PARAMS["additional_transcripts"]:
         additional_transcripts = PARAMS["additional_transcripts"]
