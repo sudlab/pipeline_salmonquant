@@ -278,8 +278,6 @@ def add_decoy_to_transcriptome(infiles, outfile):
     else:
         additional_transcripts = ""
         
-    additional_transcripts = infiles
-
     statement = ''' cat %(transcriptome)s 
                         %(decoy_sequence)s 
                         %(additional_transcripts)s > %(outfile)s'''
