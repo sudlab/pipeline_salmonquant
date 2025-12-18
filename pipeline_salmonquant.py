@@ -279,8 +279,8 @@ def add_decoy_to_transcriptome(infiles, outfile):
         additional_transcripts = ""
         
     statement = ''' cat %(transcriptome)s 
-                        %(decoy_sequence)s 
-                        %(additional_transcripts)s > %(outfile)s'''
+                        %(additional_transcripts)s
+                        %(decoy_sequence)s > %(outfile)s'''
     P.run(statement)
 
 
